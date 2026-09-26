@@ -1,0 +1,66 @@
+{
+  "name": "blue-bird-cli",
+  "version": "0.1.0",
+  "description": "Blue Bird — an endpoint-agnostic, zero-dependency coding agent harness for the terminal.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Ayush Thakur (https://github.com/ayush-thakur02)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ayush-thakur02/blue-bird-cli.git"
+  },
+  "homepage": "https://github.com/ayush-thakur02/blue-bird-cli#readme",
+  "bugs": {
+    "url": "https://github.com/ayush-thakur02/blue-bird-cli/issues"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "bin": {
+    "bluebird": "bin/bluebird.js",
+    "blue-bird": "bin/bluebird.js",
+    "bb": "bin/bluebird.js"
+  },
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "bin",
+    "src",
+    "docs",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "node src/cli.ts",
+    "start": "node src/cli.ts",
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm test",
+    "link": "npm link",
+    "unlink": "npm unlink -g blue-bird-cli",
+    "release": "node scripts/release.mjs",
+    "pack:check": "npm pack --dry-run",
+    "prepublishOnly": "npm run verify"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "agent",
+    "cli",
+    "coding-agent",
+    "harness",
+    "llm",
+    "openai",
+    "anthropic",
+    "terminal",
+    "tui"
+  ],
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "typescript": "^5.9.2"
+  }
+}

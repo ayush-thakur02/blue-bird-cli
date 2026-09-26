@@ -1,0 +1,66 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+# id-token lets npm mint a provenance attestation (and is what trusted publishing
+# uses); contents is for creating the GitHub release.
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    name: publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # No registry-url on purpose: it writes an .npmrc that expects
+      # NODE_AUTH_TOKEN. Authentication here is either npm trusted publishing
+      # (configure this repo + workflow as a trusted publisher on npmjs.com) or a
+      # granular token passed as NODE_AUTH_TOKEN — see docs/RELEASING.md.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.18"
+
+      - run: npm ci --include=dev
+
+      - name: Tag matches package.json
+        run: |
+          node -e '
+            const { version } = require("./package.json");
+            const tag = process.env.GITHUB_REF_NAME;
+            if (`v${version}` !== tag) {
+              console.error(`tag ${tag} does not match package.json version ${version}`);
+              process.exit(1);
+            }
+          '
+
+      - run: npm run verify
+
+      # Publishing locally first (npm run release -- … --publish) is supported:
+      # the workflow then only creates the GitHub release instead of failing on a
+      # version the registry already has.
+      - name: Is this version already on npm?
+        id: registry
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "blue-bird-cli@${version}" version >/dev/null 2>&1; then
+            echo "blue-bird-cli@${version} is already published — skipping npm publish"
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish
+        if: steps.registry.outputs.published == 'false'
+        run: npm publish --access public --provenance
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes

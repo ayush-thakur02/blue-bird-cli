@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+
+# Blue Bird local state (project-scoped sessions, checkpoints, plans)
+.bluebird/sessions/
+.bluebird/checkpoints/
+.bluebird/plans/
+.bluebird/cache/
+.bluebird/managed-settings.json
+
+# npm pack output
+*.tgz
+.commandcode/
