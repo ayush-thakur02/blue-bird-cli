@@ -12,6 +12,7 @@ import { CheckpointManager } from "../src/core/checkpoint.ts";
 import { applyEdit } from "../src/tools/fs.ts";
 import { visibleWidth, sliceVisible, truncateVisible, charWidth } from "../src/ui/ansi.ts";
 import { previousGraphemeStart, nextGraphemeEnd, layoutLines } from "../src/ui/input.ts";
+import { AbortError, isAbortError } from "../src/util/errors.ts";
 import { Runtime } from "../src/runtime.ts";
 
 function tempDir(prefix = "bb-reliability-"): string {
@@ -248,6 +249,31 @@ test("an aborted run stops before doing any work", async () => {
     runtime.agent.setAbortSignal(controller.signal);
     await assert.rejects(() => runtime.agent.submit(`@tool write ${JSON.stringify({ file_path: path.join(root, "nope.txt"), content: "x" })}`));
     assert.equal(fs.existsSync(path.join(root, "nope.txt")), false);
+  });
+});
+
+test("an interrupt mid-stream stops the turn early", async () => {
+  await withWorkspace(async ({ runtime }) => {
+    // `@slow` streams a character at a time, so the baseline turn is long enough
+    // for the interrupt to land in the middle of it.
+    const slow = `@slow ${"detail ".repeat(40)}`;
+    const baseline = Date.now();
+    await runtime.agent.submit(slow);
+    const fullMs = Date.now() - baseline;
+
+    const controller = new AbortController();
+    runtime.agent.setAbortSignal(controller.signal);
+    setTimeout(() => controller.abort(new AbortError("interrupted")), 50);
+    const interrupted = Date.now();
+    await assert.rejects(
+      () => runtime.agent.submit(slow),
+      (error: unknown) => isAbortError(error),
+      "the turn should end with an abort, not a completed stream",
+    );
+    const interruptedMs = Date.now() - interrupted;
+
+    assert.ok(fullMs > 300, `the baseline turn should stream slowly (took ${fullMs}ms)`);
+    assert.ok(interruptedMs < fullMs / 2, `the interrupt should cut the stream short (${interruptedMs}ms vs ${fullMs}ms)`);
   });
 });
 

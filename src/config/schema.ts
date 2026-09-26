@@ -334,6 +334,13 @@ export interface SessionConfig {
   dir: string;
 }
 
+export interface UpdateConfig {
+  /** Check the registry on startup and install a newer release in the background. */
+  auto: boolean;
+  /** Hours between registry checks; the answer is cached in ~/.bluebird/update.json. */
+  checkIntervalHours: number;
+}
+
 export interface BlueBirdConfig {
   $schema?: string;
   version: number;
@@ -363,6 +370,7 @@ export interface BlueBirdConfig {
   memory?: MemoryConfig;
   sessions?: SessionConfig;
   images?: ImagesConfig;
+  update?: UpdateConfig;
 
   /** Extra directories added to the tool sandbox. */
   includeDirectories?: string[];
@@ -432,6 +440,11 @@ export const DEFAULT_IMAGES: ImagesConfig = {
   detail: "auto",
 };
 
+export const DEFAULT_UPDATE: UpdateConfig = {
+  auto: true,
+  checkIntervalHours: 24,
+};
+
 export const DEFAULT_CONFIG: BlueBirdConfig = {
   version: CONFIG_VERSION,
   effort: "auto",
@@ -441,6 +454,7 @@ export const DEFAULT_CONFIG: BlueBirdConfig = {
   agent: DEFAULT_AGENT,
   memory: DEFAULT_MEMORY,
   sessions: DEFAULT_SESSIONS,
+  update: DEFAULT_UPDATE,
 };
 
 export interface ResolvedModel {

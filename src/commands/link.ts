@@ -3,6 +3,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { fileExists, readJsonSync } from "../util/paths.ts";
+import { npmGlobalPrefix } from "../util/npm.ts";
 import { BlueBirdError } from "../util/errors.ts";
 import { CLI_NAME, VERSION } from "../version.ts";
 import { accent, bold, dim } from "../cli/prompt.ts";
@@ -87,9 +88,7 @@ function run(command: string, args: string[], cwd?: string): { status: number | 
 }
 
 function resolveGlobalPrefix(): string | undefined {
-  const result = run("npm", ["prefix", "-g"]);
-  if (result.status !== 0 || !result.stdout) return undefined;
-  return result.stdout.split("\n").pop()!.trim();
+  return npmGlobalPrefix();
 }
 
 /**

@@ -47,6 +47,10 @@ bluebird version
 | `--offline` | doctor | Skip the network probe |
 | `--global` | config, effort, permissions, init | Target `~/.bluebird/` |
 
+Interactive sessions also check for a newer release (at most once a day) and install it in the
+background when npm owns this copy; `BLUEBIRD_NO_UPDATE=1` or `"update": { "auto": false }` turns that
+off. `bluebird doctor` reports what the last check found.
+
 ### Output formats for `run`
 
 ```

@@ -6,6 +6,15 @@ export interface ScreenOptions {
   theme: Theme;
 }
 
+export interface InputBoxRender {
+  /** Body rows, one per line of input. */
+  lines: string[];
+  /** Rows drawn under the box: the completion list and the status line. */
+  footer?: string[];
+  /** Where to leave the caret, as a row inside the block plus a 1-based column. */
+  caret?: { row: number; column: number };
+}
+
 /**
  * Owns every byte written to stdout. Rendering is centralised here so the
  * streaming transcript, the activity line and the input box never fight over
@@ -18,6 +27,8 @@ export class Screen {
   private activityText = "";
   private inputBlockLines = 0;
   private inputFrame = "";
+  /** Row inside the input block the cursor was left on (0 = top border). */
+  private inputCursorRow = 0;
   private streamColumn = 0;
   private streamedAny = false;
   private previousLine = "";
@@ -110,8 +121,13 @@ export class Screen {
     return `${padding}${left}${" ".repeat(available + 1)}${this.theme.dim(right)}`;
   }
 
-  /** Draws the framed input box at the bottom of the screen. */
-  drawInputBox(render: { lines: string[]; status?: string }): void {
+  /**
+   * Draws the framed input box at the bottom of the screen and leaves the cursor
+   * on `caret.row` inside that block (row 0 is the top border; the default is the
+   * top). `clearInput` erases upwards by exactly that offset, so redrawing never
+   * walks the box up the screen.
+   */
+  drawInputBox(render: InputBoxRender): void {
     if (!this.isTTY) return;
     this.clearInput();
     const inner = this.width - 2;
@@ -121,15 +137,17 @@ export class Screen {
       const content = padEndVisible(truncateVisible(line, inner - 2), inner - 2);
       return `${this.theme.border("│")} ${content} ${this.theme.border("│")}`;
     });
-    const frame = [top, ...body, bottom].join("\n");
-    const status = render.status ? `\n${truncateVisible(render.status, this.width)}` : "";
-    const output = `${frame}${status}`;
-    this.inputBlockLines = render.lines.length + 2 + (render.status ? 1 : 0);
-    this.inputFrame = output;
-    this.write(`${output}`);
+    const footer = (render.footer ?? []).map((line) => truncateVisible(line, this.width));
+    const rows = [top, ...body, bottom, ...footer];
+    this.inputBlockLines = rows.length;
+    this.inputCursorRow = render.caret ? Math.max(0, Math.min(render.caret.row, rows.length - 1)) : 0;
+    this.inputFrame = rows.join("\n");
+    this.write(this.inputFrame);
+    this.write(cursor.up(rows.length - 1 - this.inputCursorRow));
+    if (render.caret) this.write(cursor.toColumn(render.caret.column));
   }
 
-  updateInputBox(render: { lines: string[]; status?: string }): void {
+  updateInputBox(render: InputBoxRender): void {
     this.drawInputBox(render);
   }
 
@@ -137,9 +155,10 @@ export class Screen {
     if (!this.isTTY) return;
     const lines = this.inputBlockLines || countLinesInFrame(this.inputFrame);
     if (lines > 0) {
-      this.write(`\r${cursor.up(lines)}${cursor.clearDown()}`);
+      this.write(`\r${cursor.up(this.inputCursorRow)}${cursor.clearDown()}`);
     }
     this.inputBlockLines = 0;
+    this.inputCursorRow = 0;
     this.inputFrame = "";
   }
 

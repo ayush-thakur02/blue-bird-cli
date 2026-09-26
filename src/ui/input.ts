@@ -1,5 +1,5 @@
 import type { ConfirmPrompt } from "../core/contracts.ts";
-import { visibleWidth, sliceVisible, cursor as ansiCursor, truncateVisible } from "./ansi.ts";
+import { visibleWidth, sliceVisible, truncateVisible } from "./ansi.ts";
 import type { Theme } from "./theme.ts";
 import type { Screen } from "./screen.ts";
 import { registerTerminalRestore } from "./terminal.ts";
@@ -37,6 +37,8 @@ interface KeyEvent {
 
 const ESC = "\u001b";
 const DEFAULT_MAX_LINES = 8;
+/** Cells before the typed text: the border, a space, the prompt glyph, a space. */
+const BODY_PREFIX = 4;
 
 export class InputController {
   private readonly options: InputOptions;
@@ -97,6 +99,9 @@ export class InputController {
     } catch {
       // terminal already restored
     }
+    // A resumed TTY keeps the event loop alive, which left an exited session
+    // sitting at a dead prompt that no longer answered Ctrl+C.
+    stdin.pause();
     this.options.screen.clearInput();
   }
 
@@ -131,6 +136,20 @@ export class InputController {
   }
 
   refresh(): void {
+    this.render();
+  }
+
+  /**
+   * Prints a line above the input box: the box is erased first and redrawn
+   * underneath, so an out-of-band notice cannot overwrite what is being typed.
+   */
+  printAbove(text: string): void {
+    if (!this.isActive) {
+      this.write(`${text}\n`);
+      return;
+    }
+    this.options.screen.clearInput();
+    for (const line of text.split("\n")) this.write(`${line}\n`);
     this.render();
   }
 
@@ -198,19 +217,20 @@ export class InputController {
       if (logicalIndex === caretLine) {
         const scrolled = scrollLine(raw, innerWidth, caretColumnInLine);
         caretDisplayColumn = scrolled.column;
-        return `${theme.dim("❯")} ${scrolled.text}`;
+        return `${theme.dim(theme.glyphs.prompt)} ${scrolled.text}`;
       }
       return `  ${truncateVisible(raw, innerWidth)}`;
     });
-    if (!body.length) body.push(theme.dim("❯ "));
+    if (!body.length) body.push(theme.dim(`${theme.glyphs.prompt} `));
 
     const status = this.statusText();
-    const extra = [inline, status].filter(Boolean).join("\n");
-    screen.drawInputBox({ lines: body, ...(extra ? { status: extra } : {}) });
-
-    const linesBelow = body.length - 1 - (caretLine - firstVisible) + 1 + (extra ? extra.split("\n").length : 0);
-    if (linesBelow > 0) this.write(ansiCursor.up(linesBelow));
-    this.write(ansiCursor.toColumn(caretDisplayColumn + 4));
+    const footer = [inline, status].filter((line): line is string => Boolean(line));
+    screen.drawInputBox({
+      lines: body,
+      ...(footer.length ? { footer } : {}),
+      // Row 0 is the top border, so the caret line sits one row further down.
+      caret: { row: 1 + (caretLine - firstVisible), column: caretDisplayColumn + BODY_PREFIX + 1 },
+    });
   }
 
   private statusText(): string | undefined {
@@ -518,15 +538,15 @@ export class InputController {
     if (prompt.body) {
       for (const line of prompt.body.split("\n").slice(0, 6)) lines.push(theme.dim(`  ${line}`));
     }
-    screen.drawInputBox({ lines });
     const optionLine = prompt.options
       .map((option, index) => {
         const label = option.key ? `${option.key}) ${option.label}` : option.label;
         return index === selected ? theme.accent(`▸ ${label}`) : theme.dim(`  ${label}`);
       })
       .join("   ");
-    this.write(`\n${truncateVisible(optionLine, screen.width)}\n`);
-    state.renderedOptions = true;
+    // The options belong to the block: drawn as a footer row, `clearInput`
+    // erases them with the box instead of leaving a stale line behind.
+    screen.drawInputBox({ lines, footer: [truncateVisible(optionLine, screen.width)] });
   }
 
   private handlePromptInput(chunk: string): void {
@@ -562,11 +582,6 @@ export class InputController {
           return;
         }
       }
-    }
-    this.options.screen.clearInput();
-    if (state.renderedOptions) {
-      this.write(ansiCursor.up(1));
-      this.write("\u001b[2K");
     }
     this.drawPrompt();
   }
@@ -888,7 +903,6 @@ interface PromptState {
   prompt: ConfirmPrompt;
   selected: number;
   resolve: (value: string) => void;
-  renderedOptions?: boolean;
 }
 
 async function fallbackConfirm(prompt: ConfirmPrompt): Promise<string> {

@@ -6,6 +6,28 @@ All notable changes to Blue Bird are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `bluebird` updates itself: interactive sessions check the registry at most once a day (cached in
+  `~/.bluebird/update.json`) and install a newer release with `npm install -g` in the background,
+  printing one line when it lands. Only a copy npm installed is replaced — checkouts, CI and
+  non-interactive runs are skipped, and anything else gets the command to run instead. Opt out with
+  `BLUEBIRD_NO_UPDATE=1` or `"update": { "auto": false }`; `bluebird doctor` reports the last check.
+
+### Fixed
+
+- The input box walked one row up the screen on every keystroke, taking the transcript with it. The
+  cursor is left on a known row inside the block, and the erase moves back by exactly that offset
+  instead of the whole block height (`src/ui/screen.ts`).
+- The caret was drawn one cell left of the typed text, and permission prompts erased a line of
+  transcript above the box because their option row was drawn outside the block.
+- Ctrl+C could leave a session alive but deaf: raw stdin kept the event loop running after teardown,
+  and an in-flight request was never cancelled on exit. Stopping the input now releases the terminal,
+  quitting aborts the turn, and a non-zero exit can no longer hang on a stray handle.
+- An interrupt now cancels the queued messages behind it (`dropped N queued messages`) instead of
+  starting the next one immediately, and it also stops `!command` passthrough, which previously ran
+  to completion because preprocessing had no signal.
+
 ## [0.1.1] - 2026-09-26
 
 ### Fixed

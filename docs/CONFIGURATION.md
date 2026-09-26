@@ -14,6 +14,22 @@ Blue Bird merges configuration from several places. Later sources win.
 (or `MY_KEY=… bluebird …`) always wins. `bluebird init` writes there when you choose to store the key
 in `.env`; `bluebird doctor` reports which files were loaded and which variables came from them.
 
+## Updates
+
+```jsonc
+"update": { "auto": true, "checkIntervalHours": 24 }
+```
+
+The interactive CLI asks `registry.npmjs.org` for the newest version at most once per interval (the
+answer is cached in `~/.bluebird/update.json`, so a session usually starts without a request). When a
+newer release exists and npm itself installed this copy, it runs `npm install -g` detached in the
+background and prints `✓ updated … restart to use it`; anything else — a linked checkout, a pnpm or
+yarn install, a machine without write access to the prefix — prints the command to run instead.
+
+Set `BLUEBIRD_NO_UPDATE=1` to disable the check for one environment, or `update.auto: false` to
+disable it in the config. Non-interactive runs and CI are always skipped. `bluebird doctor` reports
+the running version, the version the registry reported, and the reason when automatic updates are off.
+
 `bluebird config list` prints the merged result, the sources and any validation problems.
 `bluebird config path` prints every location. A `--config <path>` flag (or `BLUEBIRD_CONFIG`) pins a
 single file instead.

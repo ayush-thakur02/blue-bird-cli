@@ -20,6 +20,9 @@ import { shouldAttachImages } from "../core/vision.ts";
 import type { ImageAttachment } from "../core/messages.ts";
 import { BLUEBIRD_MEMORY_FILENAME } from "../core/memory.ts";
 import { runInit } from "./init.ts";
+import { packageRootFrom } from "./link.ts";
+import { autoUpdateOnStart, type AutoUpdateResult } from "../core/update.ts";
+import { PACKAGE_NAME } from "../version.ts";
 import type { ParsedArgs } from "../cli/args.ts";
 import { flagBool, flagString } from "../cli/args.ts";
 import type { LoadConfigOverrides } from "../config/load.ts";
@@ -62,6 +65,10 @@ class ChatSession {
   private readonly queue: string[] = [];
   private processing = false;
   private exiting = false;
+  /** Set by Ctrl+C so the queue behind an interrupted turn is dropped, not run. */
+  private interrupted = false;
+  /** Cancels everything the current turn is doing, preprocessing included. */
+  private turnAbort?: AbortController;
   private resolveExit?: (code: number) => void;
   private unregisterRestore?: () => void;
 
@@ -106,6 +113,10 @@ class ChatSession {
       },
       onInterrupt: () => {
         if (!this.processing) return;
+        this.interrupted = true;
+        // The turn controller covers the whole turn, including the `!command`
+        // and `@file` preprocessing that runs before the agent loop starts.
+        this.turnAbort?.abort();
         this.runtime.agent.abort("interrupted");
         this.screen.clearActivity();
         this.screen.line(this.theme.dim("  interrupting…"));
@@ -135,6 +146,14 @@ class ChatSession {
     // An external SIGINT (kill -INT, or Ctrl+C outside raw mode) must exit the
     // session cleanly rather than skip teardown.
     process.on("SIGINT", () => this.finish(130));
+
+    // An update is checked once a day and installed in the background; the check
+    // runs while the banner is printed so it never delays the prompt.
+    const updatePromise = autoUpdateOnStart({
+      config: runtime.config.raw,
+      packageRoot: packageRootFrom(import.meta.url),
+      tty: Boolean(process.stdin.isTTY && process.stdout.isTTY),
+    }).catch(() => ({}) as AutoUpdateResult);
 
     for (const line of renderBanner({
       theme,
@@ -170,6 +189,13 @@ class ChatSession {
       screen.blank();
     }
 
+    // Printed before the input box starts, where a plain line cannot collide with it.
+    const update = await updatePromise;
+    if (update.notice) {
+      screen.line(`  ${theme.dim(update.notice)}`);
+      screen.blank();
+    }
+
     const exitPromise = new Promise<number>((resolve) => {
       this.resolveExit = resolve;
     });
@@ -180,6 +206,12 @@ class ChatSession {
     });
     if (process.stdout.isTTY) process.stdout.write(ansiCursor.hide());
     input.start();
+
+    void update.installed?.then((version) => {
+      if (version) {
+        input.printAbove(`  ${theme.success("✓")} ${theme.dim(`updated ${PACKAGE_NAME} to ${version} — restart to use it`)}`);
+      }
+    });
 
     if (this.options.initialPrompt) {
       await this.enqueue(this.options.initialPrompt);
@@ -219,15 +251,30 @@ class ChatSession {
     while (this.queue.length > 0 && !this.exiting) {
       const next = this.queue.shift()!;
       await this.runTurn(next);
+      if (this.interrupted) {
+        // Ctrl+C cancels the turn *and* what was queued behind it; otherwise the
+        // next prompt started immediately and the interrupt looked ignored.
+        const dropped = this.queue.length;
+        this.queue.length = 0;
+        this.interrupted = false;
+        if (dropped > 0) {
+          this.screen.line(this.theme.dim(`  dropped ${dropped} queued message${dropped === 1 ? "" : "s"}`));
+        }
+        break;
+      }
       this.input.showQueued(this.queue.length);
     }
   }
 
   private async runTurn(raw: string): Promise<void> {
     this.processing = true;
+    const controller = new AbortController();
+    this.turnAbort = controller;
+    this.runtime.agent.setAbortSignal(controller.signal);
     try {
       const runtime = this.runtime;
-      const prepared = await preprocess(raw, runtime, this.screen, this.theme);
+      const prepared = await preprocess(raw, runtime, this.screen, this.theme, controller.signal);
+      if (controller.signal.aborted) return;
       if (!prepared.prompt.trim()) return;
       if (!runtime.session.info().title) runtime.session.setTitle(raw.split("\n")[0]!.slice(0, 100));
       await runtime.agent.submit(prepared.prompt, prepared.images.length ? { images: prepared.images } : {});
@@ -239,6 +286,8 @@ class ChatSession {
       }
     } finally {
       this.processing = false;
+      this.turnAbort = undefined;
+      this.runtime.agent.setAbortSignal(undefined);
       this.runtime.session.flush(true);
       this.runtime.agent.resetTrackers();
     }
@@ -351,6 +400,12 @@ class ChatSession {
   private finish(code: number): void {
     if (this.exiting) return;
     this.exiting = true;
+    this.queue.length = 0;
+    this.interrupted = false;
+    // Leaving a turn running would keep a request (and its socket) alive after
+    // the terminal is handed back, so Ctrl+C at the second press really exits.
+    this.turnAbort?.abort();
+    this.runtime.agent.abort("session closed");
     this.resolveExit?.(code);
   }
 
@@ -374,6 +429,10 @@ class ChatSession {
       );
       this.screen.line("");
     }
+    // A background task, hook or socket can still hold the event loop open; the
+    // user asked to quit, so exit once the terminal has been restored. Unref'd,
+    // so a clean shutdown never waits for this.
+    setTimeout(() => process.exit(code), 250).unref();
   }
 }
 
@@ -408,15 +467,22 @@ export interface PreparedInput {
   images: ImageAttachment[];
 }
 
-async function preprocess(raw: string, runtime: Runtime, screen: Screen, theme: ReturnType<typeof createTheme>): Promise<PreparedInput> {
+async function preprocess(
+  raw: string,
+  runtime: Runtime,
+  screen: Screen,
+  theme: ReturnType<typeof createTheme>,
+  signal: AbortSignal,
+): Promise<PreparedInput> {
   if (raw.startsWith("!")) {
+    if (signal.aborted) return { prompt: "", images: [] };
     const command = raw.slice(1).trim();
     screen.line(theme.dim(`  $ ${command}`));
     const result = await runCommand({
       command,
       cwd: runtime.config.cwd,
       timeoutMs: 120_000,
-      signal: new AbortController().signal,
+      signal,
     });
     const output = stripAnsi(`${result.stdout}${result.stderr ? `\n${result.stderr}` : ""}`).trimEnd();
     for (const line of output.split("\n").slice(0, 60)) screen.line(`  ${theme.dim(line)}`);

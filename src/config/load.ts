@@ -28,6 +28,7 @@ import {
   DEFAULT_PERMISSIONS,
   DEFAULT_SESSIONS,
   DEFAULT_UI,
+  DEFAULT_UPDATE,
   EFFORT_LEVELS,
   isEffortSetting,
   type ApiFlavor,
@@ -209,6 +210,7 @@ export function applyDefaults(raw: BlueBirdConfig): BlueBirdConfig {
     permissions: { ...DEFAULT_PERMISSIONS, ...(raw.permissions ?? {}) },
     memory: { ...DEFAULT_MEMORY, ...(raw.memory ?? {}) },
     sessions: { ...DEFAULT_SESSIONS, ...(raw.sessions ?? {}) },
+    update: { ...DEFAULT_UPDATE, ...(raw.update ?? {}) },
     images: { ...DEFAULT_IMAGES, ...(raw.images ?? {}) },
   };
 }

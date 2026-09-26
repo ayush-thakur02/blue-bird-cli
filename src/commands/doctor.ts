@@ -11,6 +11,7 @@ import { extensionDirs, loadAgents, loadCommands, loadSkills, mergeAgents } from
 import { discoverMemory } from "../core/memory.ts";
 import { defaultTools } from "../tools/index.ts";
 import { describeInstall, packageRootFrom } from "./link.ts";
+import { readUpdateState, skipReason } from "../core/update.ts";
 import { dim, accent, bold } from "../cli/prompt.ts";
 import { VERSION } from "../version.ts";
 
@@ -211,6 +212,27 @@ export async function runDoctor(options: DoctorOptions): Promise<number> {
     name: "install",
     ok: true,
     detail: describeInstall(packageRootFrom(import.meta.url)),
+  });
+
+  const updateState = readUpdateState();
+  const updateSkip = skipReason({
+    config: raw,
+    tty: Boolean(process.stdin.isTTY),
+    packageRoot: packageRootFrom(import.meta.url),
+  });
+  checks.push({
+    name: "update",
+    ok: true,
+    detail: [
+      `running v${VERSION}`,
+      updateState.latest ? `registry has ${updateState.latest}` : "registry not checked yet",
+      updateState.installed ? `installed ${updateState.installed} — restart to use it` : undefined,
+      updateSkip ? `automatic updates off: ${updateSkip}` : "automatic updates on",
+      updateState.installError ? `last install failed: ${updateState.installError}` : undefined,
+      updateState.error ? `last check failed: ${updateState.error}` : undefined,
+    ]
+      .filter(Boolean)
+      .join(" · "),
   });
 
   return report(checks, warnings, options);

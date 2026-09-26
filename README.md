@@ -84,6 +84,14 @@ npm unlink -g @not.ayushthakur/blue-bird-cli   # or: bluebird unlink
 `bluebird link` runs `npm link` for you, then checks the global bin directory and starts the linked
 binary, so a broken or shadowed link is reported instead of silently installed.
 
+### Updates
+
+`bluebird` checks the registry at most once a day and, when a newer release exists, installs it in the
+background and tells you to restart. Only a copy that npm itself installed updates itself — a linked
+checkout or a pnpm/yarn install prints the command to run instead. Opt out with `"update": { "auto":
+false }` in the config or `BLUEBIRD_NO_UPDATE=1`; `bluebird doctor` shows the last check, the version
+the registry reported and any failure.
+
 ## Quickstart
 
 ```bash

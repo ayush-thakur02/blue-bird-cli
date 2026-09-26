@@ -42,6 +42,8 @@ Note: `npm install` needs `--include=dev` in environments where `NODE_ENV=produc
 | CLI commands and slash commands | `src/commands/` |
 | Config schema and layered loading | `src/config/` |
 | `.env` parsing, loading and writes | `src/config/env-file.ts` |
+| Registry check and background self-update | `src/core/update.ts` |
+| npm prefix / npm invocation helpers | `src/util/npm.ts` |
 | Release driver (version, changelog, tag) | `scripts/release.mjs` |
 | Image detection and encoding | `src/util/images.ts` |
 
@@ -58,6 +60,13 @@ Note: `npm install` needs `--include=dev` in environments where `NODE_ENV=produc
   process environment.
 - **The version lives in three files.** `package.json`, `src/version.ts` and `package-lock.json` are
   bumped together (by `scripts/release.mjs`) and `test/release.test.ts` fails when they drift.
+- **Nothing is drawn over the input box.** `Screen.drawInputBox` leaves the cursor on a known row inside
+  the block and `clearInput` moves back by exactly that offset; anything printed out of band goes
+  through `InputController.printAbove`. `test/ui-input.test.ts` replays the escape sequences and fails
+  when a redraw moves the box.
+- **Only npm's own install may self-update.** `update.skipReason` refuses checkouts, CI, non-terminals
+  and opt-outs, and the background install runs only when the running copy sits in the npm global
+  prefix (`src/core/update.ts`).
 
 ## Testing
 
