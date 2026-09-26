@@ -6,6 +6,8 @@ All notable changes to Blue Bird are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-26
+
 ### Added
 
 - `bluebird` updates itself: interactive sessions check the registry at most once a day (cached in
@@ -73,6 +75,7 @@ All notable changes to Blue Bird are documented here. The format follows
 - `run` for automation: `--json` result object, `--stream` events, pipe-friendly stdin, exit codes.
 - Zero runtime dependencies — Node builtins only, nothing installed alongside the CLI.
 
-[Unreleased]: https://github.com/ayush-thakur02/blue-bird-cli/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/ayush-thakur02/blue-bird-cli/compare/v0.2.0...HEAD
 [0.1.0]: https://github.com/ayush-thakur02/blue-bird-cli/releases/tag/v0.1.0
 [0.1.1]: https://github.com/ayush-thakur02/blue-bird-cli/compare/v0.1.0...v0.1.1
+[0.2.0]: https://github.com/ayush-thakur02/blue-bird-cli/compare/v0.1.1...v0.2.0

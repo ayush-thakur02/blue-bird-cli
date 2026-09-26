@@ -1,6 +1,6 @@
 {
   "name": "@not.ayushthakur/blue-bird-cli",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Blue Bird — an endpoint-agnostic, zero-dependency coding agent harness for the terminal.",
   "type": "module",
   "license": "MIT",
