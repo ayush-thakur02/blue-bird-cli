@@ -97,7 +97,7 @@ npm run verify
 npm run build                             # tsc -p tsconfig.build.json
 npm run pack:check                        # the exact file list npm would upload (bin, dist, docs …)
 node dist/cli.js --version                # the entry point the tarball ships
-node bin/bluebird.js --version            # the bin wrapper resolves dist/ then src/
+node bin/bluebird.js --version            # the bin wrapper: sources in a checkout, dist/ when installed
 npm link && bb --version && npm unlink -g @not.ayushthakur/blue-bird-cli
 ```
 

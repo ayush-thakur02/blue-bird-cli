@@ -7,16 +7,17 @@ const [major, minor] = process.versions.node.split(".").map(Number);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.join(here, "..");
 
-// Installed packages run the compiled output, because Node refuses to strip
-// types from files inside node_modules. A checkout runs the TypeScript sources
-// directly through native type stripping, so `bb link` needs no build.
-const compiled = path.join(packageRoot, "dist", "cli.js");
+// A checkout runs the TypeScript sources directly, so editing them takes effect
+// immediately and a stale dist/ can never be picked up. Installed packages have
+// no sources — Node refuses to strip types inside node_modules — so they run the
+// compiled output that `npm run build` (and prepack) produces.
 const source = path.join(packageRoot, "src", "cli.ts");
-const entry = fs.existsSync(compiled) ? compiled : source;
+const compiled = path.join(packageRoot, "dist", "cli.js");
+const entry = fs.existsSync(source) ? source : compiled;
 
 if (!fs.existsSync(entry)) {
   process.stderr.write(
-    `\n  Blue Bird has no build and no sources at ${source}.\n` +
+    `\n  Blue Bird has no sources and no build at ${packageRoot}.\n` +
       `  From a checkout, run: npm install --include=dev && npm run build\n\n`,
   );
   process.exit(1);
@@ -25,7 +26,7 @@ if (!fs.existsSync(entry)) {
 if (entry === source && (major < 22 || (major === 22 && minor < 18))) {
   process.stderr.write(
     `\n  Running Blue Bird from source needs Node.js 22.18 or newer (found ${process.versions.node}).\n` +
-      `  The published package ships compiled JavaScript; source checkouts run TypeScript natively.\n\n` +
+      `  Build the compiled output instead with \`npm run build\`.\n\n` +
       `  Upgrade with: nvm install 22 && nvm use 22\n\n`,
   );
   process.exit(1);

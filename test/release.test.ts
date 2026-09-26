@@ -106,7 +106,7 @@ test("the package stays publishable", () => {
 test("the bin wrapper starts the CLI from this package", () => {
   const result = spawnSync(process.execPath, [path.join(ROOT, "bin", "bluebird.js"), "--version"], { encoding: "utf8" });
   assert.equal(result.status, 0, `bin/bluebird.js exited ${result.status}: ${result.stderr}`);
-  assert.equal(result.stdout.trim(), VERSION, "the bin must resolve dist/ when it exists and src/ otherwise");
+  assert.equal(result.stdout.trim(), VERSION, "the bin must run the sources in a checkout and dist/ in an install");
 });
 
 test("the version is identical in package.json, src/version.ts and the lockfile", () => {

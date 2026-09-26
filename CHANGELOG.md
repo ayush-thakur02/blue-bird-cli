@@ -12,9 +12,10 @@ All notable changes to Blue Bird are documented here. The format follows
 
 - The published package could not start after a normal install: Node refuses to strip TypeScript types
   from files inside `node_modules` (`ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`), and 0.1.0 shipped
-  only `.ts` sources. `npm run build` now emits `dist/` with rewritten import extensions, the bin
-  wrapper prefers it, and the tarball ships it instead of `src/`. Verified by installing the packed
-  tarball and running `bb --version`, `bb init` and `bb doctor` from it.
+  only `.ts` sources. `npm run build` now emits `dist/` with rewritten import extensions, the tarball
+  ships `dist/` instead of `src/`, and the bin wrapper runs the sources in a checkout and the compiled
+  output when installed. Verified by installing the packed tarball and running `bb --version`,
+  `bb init` and `bb doctor` from it.
 - `npm pack`/`npm publish` build `dist/` automatically (`prepack`), and CI runs the compiled entry
   point so a broken or missing build fails before a release.
 
