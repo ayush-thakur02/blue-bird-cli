@@ -45,6 +45,10 @@ git push --follow-tags
 Flags: `--dry-run` (print the plan, change nothing), `--push` (push branch and tag), `--publish`
 (`npm publish` locally instead of letting CI do it), `--no-verify`, `--allow-dirty`.
 
+Publishing locally first is fine: the release workflow checks the registry, skips `npm publish` when
+the version is already there, and still creates the GitHub release. Both paths can be used in either
+order.
+
 ## What the tag publishes
 
 `.github/workflows/release.yml` runs on any `v*` tag, checks that the tag matches `package.json`,
