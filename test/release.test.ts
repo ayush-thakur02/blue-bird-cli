@@ -81,20 +81,32 @@ test("the package stays publishable", () => {
   assert.match(raw.homepage, /github\.com\/ayush-thakur02\/blue-bird-cli/);
   assert.match(raw.bugs.url, /issues/);
   assert.equal(raw.publishConfig.access, "public", "scoped-free packages still publish publicly");
+  assert.match(raw.main, /^dist\//, "an installed copy must run compiled JavaScript, not TypeScript");
+  assert.equal(raw.types, "dist/index.d.ts");
+  assert.equal(raw.exports["."].default, "./dist/index.js");
+  assert.match(raw.scripts.prepack, /build/, "packing must build dist first");
   assert.match(raw.scripts.prepublishOnly, /verify/, "publishing runs the checks");
-  assert.equal(raw.engines.node, ">=22.18.0", "the runtime floor matches native TypeScript execution");
 
-  for (const entry of ["bin", "src", "docs", "README.md", "CHANGELOG.md", "LICENSE"]) {
+  for (const entry of ["bin", "dist", "docs", "README.md", "CHANGELOG.md", "LICENSE"]) {
     assert.ok(raw.files.includes(entry), `${entry} must ship in the tarball`);
   }
+  assert.ok(!raw.files.includes("src"), "TypeScript sources cannot execute inside node_modules");
   assert.ok(fs.existsSync(path.join(ROOT, "LICENSE")), "npm warns when the licensed package has no LICENSE file");
   assert.ok(fs.existsSync(path.join(ROOT, "CHANGELOG.md")));
+
+  assert.equal(raw.engines.node, ">=22.18.0", "the runtime floor matches native TypeScript execution");
 
   const names = binNames(manifest);
   assert.deepEqual(names.sort(), ["bb", "blue-bird", "bluebird"]);
   for (const name of names) {
     assert.ok(fs.existsSync(path.join(ROOT, manifest.bin![name]!)), `bin/${name} target exists`);
   }
+});
+
+test("the bin wrapper starts the CLI from this package", () => {
+  const result = spawnSync(process.execPath, [path.join(ROOT, "bin", "bluebird.js"), "--version"], { encoding: "utf8" });
+  assert.equal(result.status, 0, `bin/bluebird.js exited ${result.status}: ${result.stderr}`);
+  assert.equal(result.stdout.trim(), VERSION, "the bin must resolve dist/ when it exists and src/ otherwise");
 });
 
 test("the version is identical in package.json, src/version.ts and the lockfile", () => {

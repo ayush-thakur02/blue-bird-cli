@@ -8,6 +8,7 @@ agent at the start of every session.
 - `npm run typecheck` — `tsc --noEmit` (strict, `erasableSyntaxOnly`, `verbatimModuleSyntax`)
 - `npm test` — `node --test test/*.test.ts`
 - `npm run verify` — both
+- `npm run build` — `tsc -p tsconfig.build.json` → `dist/` (the published entry points)
 - `node src/cli.ts --help` — run the CLI from source
 - `npm run release -- patch|minor|major|<version> [--dry-run]` — bump, changelog, commit, tag
 - `npm run pack:check` — the file list npm would publish
@@ -18,8 +19,11 @@ Note: `npm install` needs `--include=dev` in environments where `NODE_ENV=produc
 ## Rules
 
 - **Runtime dependencies are banned.** Node builtins only. TypeScript and @types/node are dev-only.
-- **No build step.** Node 22.18+ strips types from `.ts` files, so imports must end in `.ts` and the
-  code must stay erasable: no enums, no namespaces, no parameter properties.
+- **No build step for development, a build for publishing.** Node 22.18+ strips types from `.ts` files,
+  so imports must end in `.ts` and the code must stay erasable: no enums, no namespaces, no parameter
+  properties. `npm run build` (`tsconfig.build.json`) emits `dist/` with
+  `rewriteRelativeImportExtensions`, which is what the published tarball ships — Node refuses to strip
+  types inside `node_modules`, so an installed copy cannot run from source.
 - `import type` for type-only imports (`verbatimModuleSyntax` is on; a value import of a type fails).
 - Layering: `util` → `config`/`core`/`tools`/`providers` → `ui` → `commands` → `cli`. Nothing in
   `util` may import from `core`, and `config/schema.ts` must not import from `core`.

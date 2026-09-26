@@ -44,8 +44,9 @@ Added bounded retry with jitter to `fetchJson`, mirroring the existing backoff h
 - **Vision built in.** Point it at a screenshot, mockup or diagram with `@shot.png` (or let it call
   `view_image`) and a multimodal model actually looks at it — via `image_url`, `image` or
   `input_image` parts depending on the dialect.
-- **Zero runtime dependencies.** No `node_modules` at runtime, nothing to audit, instant start.
-  TypeScript runs natively on Node 22.18+.
+- **Zero runtime dependencies.** Nothing to audit and nothing to install beyond the package itself —
+  the CLI ships compiled JavaScript that Node runs directly, and the source checkout runs TypeScript
+  natively on Node 22.18+.
 - **A real harness, not a chat wrapper.** Tool orchestration, context compaction, checkpoints,
   permission presets, lifecycle hooks, subagents, skills, plan mode, session persistence.
 - **Effort you control.** `auto` classifies each request and picks a reasoning level; override any
@@ -60,13 +61,17 @@ Added bounded retry with jitter to `fetchJson`, mirroring the existing backoff h
 npm install -g @not.ayushthakur/blue-bird-cli     # provides: bluebird, blue-bird, bb
 ```
 
-Requires **Node 22.18+** (native TypeScript execution). From a checkout:
+Requires **Node 22.18+**. From a checkout:
 
 ```bash
 npm install --include=dev
 npm run typecheck && npm test
 node src/cli.ts --help
 ```
+
+Development runs the TypeScript sources directly (Node strips the types). The published package ships
+compiled JavaScript in `dist/`, built by `npm run build` and wired in automatically at pack time —
+Node refuses to strip types inside `node_modules`, so an install cannot run from source.
 
 To use the checkout itself as the `bb` command, anywhere on the machine:
 
@@ -251,7 +256,8 @@ Exit codes: `0` success, `1` failure (config, provider or task error), `130` int
 npm run typecheck     # tsc --noEmit (strict, erasableSyntaxOnly)
 npm test              # node --test, no test framework dependency
 npm run verify        # both
-npm run pack:check    # the file list npm would publish
+npm run build         # tsc -p tsconfig.build.json → dist/ (what the tarball ships)
+npm run pack:check    # the file list npm would publish (builds first)
 ```
 
 ## Releasing

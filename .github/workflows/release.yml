@@ -42,6 +42,11 @@ jobs:
 
       - run: npm run verify
 
+      - run: npm run build
+
+      - name: The compiled CLI answers
+        run: node dist/cli.js --version
+
       # Publishing locally first (npm run release -- … --publish) is supported:
       # the workflow then only creates the GitHub release instead of failing on a
       # version the registry already has.

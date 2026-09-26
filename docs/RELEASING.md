@@ -1,7 +1,7 @@
 # Releasing
 
-Blue Bird ships as TypeScript source (no build step), so a release is a version bump, a changelog
-entry, a commit and a tag. The tag is what publishes.
+Blue Bird ships compiled JavaScript (`dist/`, built by `tsc` at pack time), so a release is a version
+bump, a changelog entry, a commit and a tag. The tag is what publishes.
 
 ## One-time setup
 
@@ -94,10 +94,16 @@ than on the registry.
 
 ```bash
 npm run verify
-npm run pack:check                        # the exact file list npm would upload
-node bin/bluebird.js --version            # entry point runs on this Node
+npm run build                             # tsc -p tsconfig.build.json
+npm run pack:check                        # the exact file list npm would upload (bin, dist, docs …)
+node dist/cli.js --version                # the entry point the tarball ships
+node bin/bluebird.js --version            # the bin wrapper resolves dist/ then src/
 npm link && bb --version && npm unlink -g @not.ayushthakur/blue-bird-cli
 ```
+
+An installed copy must run from `dist/`: Node refuses to strip types from files inside `node_modules`
+(`ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`), which is why 0.1.0 was unusable after
+`npm install -g` and 0.1.1 added the build.
 
 Published versions are immutable: if something is wrong, fix it, release the next patch, and
 `npm deprecate @not.ayushthakur/blue-bird-cli@<version> "<reason>"` the bad one.

@@ -6,6 +6,16 @@ All notable changes to Blue Bird are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The published package could not start after a normal install: Node refuses to strip TypeScript types
+  from files inside `node_modules` (`ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`), and 0.1.0 shipped
+  only `.ts` sources. `npm run build` now emits `dist/` with rewritten import extensions, the bin
+  wrapper prefers it, and the tarball ships it instead of `src/`. Verified by installing the packed
+  tarball and running `bb --version`, `bb init` and `bb doctor` from it.
+- `npm pack`/`npm publish` build `dist/` automatically (`prepack`), and CI runs the compiled entry
+  point so a broken or missing build fails before a release.
+
 ## [0.1.0] - 2026-09-26
 
 ### Added
@@ -36,8 +46,7 @@ All notable changes to Blue Bird are documented here. The format follows
 - Commands: `init`, `chat`, `resume`, `run`, `config`, `models`, `effort`, `permissions`,
   `sessions`, `tools`, `agents`, `skills`, `commands`, `doctor`, `completion`, `version`, `help`.
 - `run` for automation: `--json` result object, `--stream` events, pipe-friendly stdin, exit codes.
-- Zero runtime dependencies — Node.js 22.18+ executes the TypeScript sources directly, with no build
-  step and no `node_modules` at runtime.
+- Zero runtime dependencies — Node builtins only, nothing installed alongside the CLI.
 
 [Unreleased]: https://github.com/ayush-thakur02/blue-bird-cli/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/ayush-thakur02/blue-bird-cli/releases/tag/v0.1.0

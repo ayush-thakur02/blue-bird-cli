@@ -26,5 +26,9 @@ jobs:
 
       - run: npm run verify
 
+      # The tarball ships dist/, so the build and the compiled entry point are part of CI.
+      - run: npm run build
+      - run: node dist/cli.js --version
+
       - name: Published tarball contents
         run: npm run pack:check

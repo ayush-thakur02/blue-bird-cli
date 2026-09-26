@@ -21,19 +21,24 @@
     "blue-bird": "bin/bluebird.js",
     "bb": "bin/bluebird.js"
   },
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
   "files": [
     "bin",
-    "src",
+    "dist",
     "docs",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "dev": "node src/cli.ts",
     "start": "node src/cli.ts",
     "test": "node --test test/*.test.ts",
@@ -42,6 +47,7 @@
     "link": "npm link",
     "unlink": "npm unlink -g @not.ayushthakur/blue-bird-cli",
     "release": "node scripts/release.mjs",
+    "prepack": "npm run build",
     "pack:check": "npm pack --dry-run",
     "prepublishOnly": "npm run verify"
   },
