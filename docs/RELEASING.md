@@ -5,14 +5,23 @@ entry, a commit and a tag. The tag is what publishes.
 
 ## One-time setup
 
-1. `npm login` with an account that can publish `blue-bird-cli`.
-2. Claim the name (it is unclaimed as of 0.1.0) — the first `npm publish` does that.
+The package is published as **`@not.ayushthakur/blue-bird-cli`**. The unscoped name `blue-bird-cli` is
+rejected by npm with `E403 Package name too similar to existing package bluebird-cli`, so the scope is
+what makes the name publishable. Scopes require public access, which `publishConfig.access` in
+`package.json` supplies.
+
+1. `npm login` with an account that can publish `@not.ayushthakur/blue-bird-cli`.
+2. The first publish claims the name:
+   `npm publish --access public` (add `--otp=<code>` when the account enforces 2FA).
 3. Connect GitHub Actions to npm. **Trusted publishing (recommended, no secret):** on npmjs.com open
    the package → *Settings* → *Trusted Publisher* → *GitHub Actions* and set
    owner `ayush-thakur02`, repository `blue-bird-cli`, workflow `release.yml`.
-   *Token alternative:* create a granular access token with publish rights, add it as the repository
-   secret `NPM_TOKEN`, then in `.github/workflows/release.yml` add `registry-url: https://registry.npmjs.org`
-   to the `setup-node` step and `env: NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` to the publish step.
+   Configurations created after 2026-09-03 default to staged publishing only — enable the direct
+   `npm publish` action too, or the workflow's publish step is rejected.
+   *Token alternative:* create a granular access token with **Bypass 2FA** checked and publish rights,
+   add it as the repository secret `NPM_TOKEN`, then in `.github/workflows/release.yml` add
+   `registry-url: https://registry.npmjs.org` to the `setup-node` step and
+   `env: NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` to the publish step.
 
 ## First release
 
@@ -87,8 +96,8 @@ than on the registry.
 npm run verify
 npm run pack:check                        # the exact file list npm would upload
 node bin/bluebird.js --version            # entry point runs on this Node
-npm link && bb --version && npm unlink -g blue-bird-cli
+npm link && bb --version && npm unlink -g @not.ayushthakur/blue-bird-cli
 ```
 
 Published versions are immutable: if something is wrong, fix it, release the next patch, and
-`npm deprecate blue-bird-cli@<version> "<reason>"` the bad one.
+`npm deprecate @not.ayushthakur/blue-bird-cli@<version> "<reason>"` the bad one.

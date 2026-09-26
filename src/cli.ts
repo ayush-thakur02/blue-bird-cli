@@ -439,7 +439,7 @@ const HELP_TOPICS: Record<string, string> = {
   \`blue-bird\` work in every directory, then runs the linked binary to confirm it
   answers. Equivalent to running \`npm link\` in the package directory.
 
-  bluebird unlink      remove the global links again (\`npm unlink -g blue-bird-cli\`)
+  bluebird unlink      remove the global links again (\`npm unlink -g @not.ayushthakur/blue-bird-cli\`)
 
   Without a global install the source entry point still works:
     node /path/to/blue-bird-cli/src/cli.ts --help

@@ -52,7 +52,7 @@ export function readManifest(root: string): PackageManifest {
   const manifest = readJsonSync<PackageManifest>(path.join(root, "package.json"));
   if (!manifest?.name) {
     throw new BlueBirdError("io", `No package.json with a name at ${root}`, {
-      hint: "Run the link command from a checkout of blue-bird-cli, or install it globally with `npm install -g blue-bird-cli`.",
+      hint: "Run the link command from a checkout of blue-bird-cli, or install it globally with `npm install -g @not.ayushthakur/blue-bird-cli`.",
     });
   }
   return manifest;

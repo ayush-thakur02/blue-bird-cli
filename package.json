@@ -1,5 +1,5 @@
 {
-  "name": "blue-bird-cli",
+  "name": "@not.ayushthakur/blue-bird-cli",
   "version": "0.1.0",
   "description": "Blue Bird — an endpoint-agnostic, zero-dependency coding agent harness for the terminal.",
   "type": "module",
@@ -40,7 +40,7 @@
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm test",
     "link": "npm link",
-    "unlink": "npm unlink -g blue-bird-cli",
+    "unlink": "npm unlink -g @not.ayushthakur/blue-bird-cli",
     "release": "node scripts/release.mjs",
     "pack:check": "npm pack --dry-run",
     "prepublishOnly": "npm run verify"

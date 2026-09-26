@@ -57,7 +57,7 @@ Added bounded retry with jitter to `fetchJson`, mirroring the existing backoff h
 ## Install
 
 ```bash
-npm install -g blue-bird-cli     # provides: bluebird, blue-bird, bb
+npm install -g @not.ayushthakur/blue-bird-cli     # provides: bluebird, blue-bird, bb
 ```
 
 Requires **Node 22.18+** (native TypeScript execution). From a checkout:
@@ -73,7 +73,7 @@ To use the checkout itself as the `bb` command, anywhere on the machine:
 ```bash
 npm link                 # or: npm run link / bluebird link
 bb --version             # confirms the linked binary answers
-npm unlink -g blue-bird-cli   # or: bluebird unlink
+npm unlink -g @not.ayushthakur/blue-bird-cli   # or: bluebird unlink
 ```
 
 `bluebird link` runs `npm link` for you, then checks the global bin directory and starts the linked

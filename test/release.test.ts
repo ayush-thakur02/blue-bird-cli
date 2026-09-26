@@ -75,6 +75,7 @@ test("the package stays publishable", () => {
   const manifest = readManifest(ROOT);
   const raw = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
 
+  assert.equal(raw.name, "@not.ayushthakur/blue-bird-cli", "the published name must match the workflow's registry check");
   assert.equal(raw.license, "MIT");
   assert.match(raw.repository.url, /github\.com\/ayush-thakur02\/blue-bird-cli/);
   assert.match(raw.homepage, /github\.com\/ayush-thakur02\/blue-bird-cli/);
