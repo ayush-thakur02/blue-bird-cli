@@ -7,7 +7,7 @@ import { callId } from "../util/ids.ts";
 import { dataUrl } from "../util/images.ts";
 import { estimateConversationTokens, estimateTokens } from "../util/tokens.ts";
 import { estimateCost } from "./openai-chat.ts";
-import { cachePlan, knownUnsupported, rememberUnsupported } from "./caching.ts";
+import { cachePlan, knownUnsupported, rememberUnsupported, withoutToolsNotice } from "./caching.ts";
 import type { ChatRequest, ModelInfo, ProbeResult, Provider, StreamEvent, StopReason } from "./types.ts";
 import {
   DEFAULT_CONNECT_TIMEOUT,
@@ -94,6 +94,7 @@ export function createOpenAiResponsesProvider(options: { id: string; def: Provid
           request.logger.debug(`Retrying responses call without ${adjustment}`);
           disabled.add(adjustment);
           rememberUnsupported(id, adjustment);
+          if (adjustment === "tools") yield { type: "notice", text: withoutToolsNotice(safeHost(url)) };
           continue;
         }
         await ensureOk(new Response(text, { status: response.status, headers: response.headers }), id, "Responses call");

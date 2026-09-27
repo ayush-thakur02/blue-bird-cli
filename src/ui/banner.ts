@@ -81,7 +81,7 @@ export function helpText(): string[] {
     "  /help              show this list",
     "  /model [name]      show or switch model",
     "  /provider [id]     show or switch provider",
-    "  /effort [level]    auto | none | minimal | low | medium | high | xhigh",
+    "  /effort [level]    auto | none | minimal | low | medium | high | xhigh | max",
     "  /permissions [p]   read-only | ask | edits | auto | danger-full-access",
     "  /plan              toggle plan mode (read-only investigation)",
     "  /compact [note]    summarize the session to free context",

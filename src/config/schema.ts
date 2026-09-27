@@ -1,9 +1,9 @@
 import { CONFIG_VERSION } from "../version.ts";
 
-export type Effort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+export type Effort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 export type EffortSetting = Effort | "auto";
 
-export const EFFORT_LEVELS: readonly Effort[] = ["none", "minimal", "low", "medium", "high", "xhigh"];
+export const EFFORT_LEVELS: readonly Effort[] = ["none", "minimal", "low", "medium", "high", "xhigh", "max"];
 
 export const EFFORT_TITLES: Record<Effort, string> = {
   none: "none",
@@ -12,6 +12,7 @@ export const EFFORT_TITLES: Record<Effort, string> = {
   medium: "medium",
   high: "high",
   xhigh: "xhigh",
+  max: "max",
 };
 
 export const EFFORT_DESCRIPTIONS: Record<Effort, string> = {
@@ -20,7 +21,8 @@ export const EFFORT_DESCRIPTIONS: Record<Effort, string> = {
   low: "Light reasoning. Cheap exploration and small features.",
   medium: "Balanced default for everyday implementation work.",
   high: "Deep reasoning for multi-file features, debugging and design.",
-  xhigh: "Maximum reasoning budget. Hard refactors, subtle bugs, architecture.",
+  xhigh: "Extra-deep reasoning. Hard refactors, subtle bugs, architecture.",
+  max: "The largest budget the model takes. For problems where a wrong answer costs more than the thinking.",
 };
 
 /** Relative ordering, useful for sweeping effort up or down. */
@@ -31,6 +33,7 @@ export const EFFORT_INDEX: Record<Effort, number> = {
   medium: 3,
   high: 4,
   xhigh: 5,
+  max: 6,
 };
 
 /** Anthropic extended-thinking budgets per level. */
@@ -41,6 +44,7 @@ export const EFFORT_THINKING_BUDGET: Record<Effort, number> = {
   medium: 8192,
   high: 16384,
   xhigh: 32768,
+  max: 65536,
 };
 
 /** Reasoning-effort strings understood by OpenAI-style chat/responses endpoints. */
@@ -51,6 +55,7 @@ export const EFFORT_OPENAI: Record<Effort, string | undefined> = {
   medium: "medium",
   high: "high",
   xhigh: "xhigh",
+  max: "max",
 };
 
 export function isEffort(value: unknown): value is Effort {

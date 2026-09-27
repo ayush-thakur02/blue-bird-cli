@@ -45,11 +45,16 @@ const HIGH_SIGNALS = [
 
 const XHIGH_SIGNALS = [
   /\bxhigh\b/i,
-  /\bmaximum effort\b/i,
   /\bbe (very )?careful\b/i,
   /\bthoroughly\b/i,
   /\bproduction\b.*\bincident\b/i,
   /\bpost[- ]mortem\b/i,
+];
+
+/** Asking for the top of the range in words is the only way auto reaches `max`. */
+const MAX_SIGNALS = [
+  /\bmax(imum)?\b[^.]{0,24}\b(effort|reasoning|thinking|budget)\b/i,
+  /\bthink as hard as you can\b/i,
 ];
 
 const LOOKUP_SIGNALS = [
@@ -72,6 +77,10 @@ export function classifyEffort(signals: EffortSignals): EffortDecision {
 
   if (signals.repeatedFailures >= 2) {
     return { effort: "high", reason: "repeated tool failures, escalating to think harder" };
+  }
+
+  if (MAX_SIGNALS.some((pattern) => pattern.test(prompt))) {
+    return { effort: "max", reason: "the request asks for the largest reasoning budget" };
   }
 
   if (XHIGH_SIGNALS.some((pattern) => pattern.test(prompt))) {
@@ -105,7 +114,8 @@ export function resolveEffort(setting: EffortSetting, signals: EffortSignals): E
 }
 
 export function shiftEffort(effort: Effort, delta: number): Effort {
-  const target = Math.min(5, Math.max(0, EFFORT_INDEX[effort] + delta));
+  const top = Math.max(...Object.values(EFFORT_INDEX));
+  const target = Math.min(top, Math.max(0, EFFORT_INDEX[effort] + delta));
   const entry = Object.entries(EFFORT_INDEX).find(([, index]) => index === target);
   return (entry?.[0] as Effort) ?? effort;
 }

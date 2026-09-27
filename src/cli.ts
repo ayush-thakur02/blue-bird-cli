@@ -387,7 +387,7 @@ ${bold("COMMANDS")}
 ${bold("KEY FLAGS")}
   -m, --model <id>         override the model for this run
       --provider <id>      override the provider
-  -e, --effort <level>     auto | none | minimal | low | medium | high | xhigh
+  -e, --effort <level>     auto | none | minimal | low | medium | high | xhigh | max
   -p, --permission <mode>  read-only | ask | edits | auto | danger-full-access
       --plan               start in plan mode (read-only investigation)
       --resume <id>        resume a session

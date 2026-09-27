@@ -30,7 +30,7 @@ bluebird version
 | --- | --- | --- |
 | `-m, --model <id>` | session, run | Override the model |
 | `--provider <id>` | session, run | Override the provider |
-| `-e, --effort <level>` | session, run | `auto`, `none`, `minimal`, `low`, `medium`, `high`, `xhigh` |
+| `-e, --effort <level>` | session, run | `auto`, `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max` |
 | `-p, --permission <mode>` | session, run | Permission preset |
 | `--plan` | session, run | Start in plan mode (read-only investigation) |
 | `--resume <id>`, `-c/--continue` | session | Resume a session |
@@ -120,11 +120,15 @@ Exit codes: `0` success · `1` error (config, provider, task) · `130` interrupt
 | `#note` | Append the note to `BLUEBIRD.md` and reload instructions |
 | trailing `\` | Continue the message on the next line |
 | `Tab` | Complete `/commands` and `@paths` |
-| `↑` / `↓` | History (Ctrl+P / Ctrl+N in multiline) |
+| `↑` / `↓` | Walk the wrapped rows of a draft, then history (Ctrl+P / Ctrl+N) |
 | `Ctrl+C` | Interrupt the turn; twice exits |
 | `Ctrl+D` | Exit |
 | `Enter` while streaming | Queues your message for the next turn |
 | `Alt+Enter` | Insert a newline |
+
+Long lines wrap inside the box instead of scrolling sideways, and the box grows with them up to
+eight rows before it starts following the caret. `↑`/`↓` move through those wrapped rows; they only
+reach history once the draft is a single row.
 
 ### Reading the status line
 

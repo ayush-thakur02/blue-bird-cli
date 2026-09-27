@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { charWidth, padEndVisible, strip, truncateVisible, visibleWidth, wrapVisible, boxify } from "../src/ui/ansi.ts";
+import { charWidth, offsetAtColumn, padEndVisible, strip, truncateVisible, visibleWidth, wrapColumns, wrapVisible, boxify } from "../src/ui/ansi.ts";
 import { createTheme } from "../src/ui/theme.ts";
 import { renderInline, renderMarkdown, MarkdownStreamRenderer } from "../src/ui/markdown.ts";
 import { detectLanguageFromPath, highlight, normalizeLanguage } from "../src/ui/highlight.ts";
@@ -34,6 +34,28 @@ test("wrapVisible re-applies color on continuation lines", () => {
   const lines = wrapVisible("\u001b[1mabcdef ghijkl mnopqr stuvwx\u001b[0m", 10);
   assert.ok(lines.length >= 2);
   assert.ok(lines[1]!.startsWith("\u001b[1m"));
+});
+
+test("wrapColumns fills rows to the width and reports where each one starts", () => {
+  const rows = wrapColumns("abcdefghij", 4);
+  assert.deepEqual(rows.map((row) => row.text), ["abcd", "efgh", "ij"]);
+  assert.deepEqual(rows.map((row) => row.start), [0, 4, 8]);
+  assert.deepEqual(wrapColumns("", 4), [{ text: "", start: 0 }]);
+});
+
+test("wrapColumns never cuts a wide character or a grapheme in half", () => {
+  const text = "👍👍👍x";
+  const rows = wrapColumns(text, 5);
+  for (const row of rows) assert.ok(visibleWidth(row.text) <= 5, `row too wide: ${row.text}`);
+  assert.equal(rows.map((row) => row.text).join(""), text);
+  for (const row of rows) assert.ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(row.text), "a surrogate pair was split");
+});
+
+test("offsetAtColumn maps a display column back to a code-unit offset", () => {
+  assert.equal(offsetAtColumn("日本", 2), 1);
+  assert.equal(offsetAtColumn("日本", 3), 1, "a column inside a wide character snaps to its start");
+  assert.equal(offsetAtColumn("日本", 4), 2);
+  assert.equal(offsetAtColumn("日本", 99), 2);
 });
 
 test("boxify pads lines to a consistent width", () => {

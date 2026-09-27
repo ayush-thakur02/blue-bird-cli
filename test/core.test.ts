@@ -67,9 +67,13 @@ test("effort classification responds to prompt shape", () => {
   assert.equal(classifyEffort({ ...base, prompt: "rename foo to bar" }).effort, "low");
   assert.equal(classifyEffort({ ...base, prompt: "refactor the auth flow and fix the race condition" }).effort, "high");
   assert.equal(classifyEffort({ ...base, prompt: "be very careful and audit this migration" }).effort, "xhigh");
+  assert.equal(classifyEffort({ ...base, prompt: "use max effort on this rewrite" }).effort, "max");
+  assert.equal(classifyEffort({ ...base, prompt: "raise the max retries to 8 in the client" }).effort, "medium");
   assert.equal(classifyEffort({ ...base, planMode: true, prompt: "add caching" }).effort, "high");
   assert.equal(resolveEffort("low", { ...base, prompt: "anything" }).effort, "low");
   assert.equal(shiftEffort("medium", 1), "high");
+  assert.equal(shiftEffort("xhigh", 1), "max");
+  assert.equal(shiftEffort("max", 1), "max");
   assert.equal(shiftEffort("none", -1), "none");
 });
 

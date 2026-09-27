@@ -1,5 +1,5 @@
 import type { ConfirmPrompt } from "../core/contracts.ts";
-import { visibleWidth, sliceVisible, truncateVisible } from "./ansi.ts";
+import { offsetAtColumn, truncateVisible, visibleWidth, wrapColumns } from "./ansi.ts";
 import type { Theme } from "./theme.ts";
 import type { Screen } from "./screen.ts";
 import { registerTerminalRestore } from "./terminal.ts";
@@ -36,9 +36,7 @@ interface KeyEvent {
 }
 
 const ESC = "\u001b";
-const DEFAULT_MAX_LINES = 8;
-/** Cells before the typed text: the border, a space, the prompt glyph, a space. */
-const BODY_PREFIX = 4;
+const DEFAULT_VISIBLE_ROWS = 8;
 
 export class InputController {
   private readonly options: InputOptions;
@@ -200,37 +198,43 @@ export class InputController {
     if (this.options.isBusy()) return;
 
     const theme = this.options.theme;
-    const maxLines = this.options.maxVisibleLines ?? DEFAULT_MAX_LINES;
+    const maxRows = this.options.maxVisibleLines ?? DEFAULT_VISIBLE_ROWS;
     const inline = this.completion
       ? `  ${theme.dim(this.completion.items.map((item, index) => (index === this.completion!.index ? theme.accent(item) : item)).join("  "))}`
       : undefined;
 
     const logical = this.buffer.split("\n");
+    const rows = wrappedRows(logical, this.textWidth());
     const { caretLine, caretColumnInLine } = layoutLines(logical, this.caret);
-    const innerWidth = Math.max(8, screen.width - 4);
-    const firstVisible = Math.max(0, Math.min(caretLine, logical.length - maxLines));
-    const window = logical.slice(firstVisible, firstVisible + maxLines);
+    const caretRow = caretRowFor(rows, caretLine, caretColumnInLine);
+    const caretColumnInRow = caretColumnInLine - rows[caretRow]!.start;
 
-    let caretDisplayColumn = caretColumnInLine;
-    const body = window.map((raw, index) => {
-      const logicalIndex = firstVisible + index;
-      if (logicalIndex === caretLine) {
-        const scrolled = scrollLine(raw, innerWidth, caretColumnInLine);
-        caretDisplayColumn = scrolled.column;
-        return `${theme.dim(theme.glyphs.prompt)} ${scrolled.text}`;
-      }
-      return `  ${truncateVisible(raw, innerWidth)}`;
-    });
-    if (!body.length) body.push(theme.dim(`${theme.glyphs.prompt} `));
+    // The window follows the caret, so typing at the bottom scrolls the box
+    // instead of growing it past `maxRows`.
+    const firstVisible = Math.max(0, caretRow - maxRows + 1);
+    const window = rows.slice(firstVisible, firstVisible + maxRows);
+    const prompt = `${theme.dim(theme.glyphs.prompt)} `;
+    const indent = " ".repeat(this.glyphCells() + 1);
+    const body = window.map((row, index) => `${firstVisible + index === 0 ? prompt : indent}${row.text}`);
 
     const status = this.statusText();
     const footer = [inline, status].filter((line): line is string => Boolean(line));
     screen.drawInputBox({
       lines: body,
       ...(footer.length ? { footer } : {}),
-      // Row 0 is the top border, so the caret line sits one row further down.
-      caret: { row: 1 + (caretLine - firstVisible), column: caretDisplayColumn + BODY_PREFIX + 1 },
+      // Row 0 is the top border, so the caret row sits one row further down.
+      caret: { row: 1 + (caretRow - firstVisible), column: this.glyphCells() + 4 + caretColumnInRow },
     });
+  }
+
+  /** Display cells the prompt glyph takes on a body row, without its trailing space. */
+  private glyphCells(): number {
+    return Math.max(1, visibleWidth(this.options.theme.glyphs.prompt));
+  }
+
+  /** Display columns the text itself has inside the box frame and the marker. */
+  private textWidth(): number {
+    return Math.max(8, this.options.screen.width - 4 - (this.glyphCells() + 1));
   }
 
   private statusText(): string | undefined {
@@ -443,17 +447,20 @@ export class InputController {
   }
 
   private moveVertical(delta: number): void {
-    const lines = this.buffer.split("\n");
-    if (lines.length === 1) {
+    const logical = this.buffer.split("\n");
+    const rows = wrappedRows(logical, this.textWidth());
+    if (rows.length === 1) {
       this.historyMove(delta);
       return;
     }
-    const currentLine = this.buffer.slice(0, this.caret).split("\n").length - 1;
-    const targetLine = currentLine + delta;
-    if (targetLine < 0 || targetLine >= lines.length) return;
-    const column = this.caret - lineStartOf(this.buffer, currentLine);
-    const targetStart = lineStartOf(this.buffer, targetLine);
-    this.caret = Math.min(targetStart + column, targetStart + lines[targetLine]!.length);
+    const { caretLine, caretColumnInLine } = layoutLines(logical, this.caret);
+    const current = caretRowFor(rows, caretLine, caretColumnInLine);
+    const target = current + delta;
+    if (target < 0 || target >= rows.length) return;
+    const row = rows[target]!;
+    // Land in the same column of the target row, clamped to the row's text.
+    const column = Math.min(row.start + (caretColumnInLine - rows[current]!.start), visibleWidth(logical[row.line]!));
+    this.caret = lineStartOf(this.buffer, row.line) + offsetAtColumn(logical[row.line]!, column);
     this.render();
   }
 
@@ -874,11 +881,30 @@ export function layoutLines(logical: string[], caret: number): { caretLine: numb
   return { caretLine, caretColumnInLine: visibleWidth(text.slice(start, caret)) };
 }
 
-/** Keeps the caret inside the visible window when a line is longer than the box. */
-export function scrollLine(text: string, width: number, caretColumn: number): { text: string; column: number } {
-  if (visibleWidth(text) <= width) return { text, column: caretColumn };
-  const offset = Math.max(0, Math.min(caretColumn - width + 2, visibleWidth(text) - width));
-  return { text: sliceVisible(text, offset, offset + width), column: caretColumn - offset };
+interface DisplayRow {
+  text: string;
+  /** Display column inside its logical line where the row starts. */
+  start: number;
+  /** Index of the logical line the row belongs to. */
+  line: number;
+}
+
+/** Every logical line split into the rows it occupies inside the box. */
+function wrappedRows(logical: string[], width: number): DisplayRow[] {
+  const rows: DisplayRow[] = [];
+  for (const [line, text] of logical.entries()) {
+    for (const row of wrapColumns(text, width)) rows.push({ ...row, line });
+  }
+  return rows;
+}
+
+/** The row the caret sits on: the last row of its line that starts at or before it. */
+function caretRowFor(rows: DisplayRow[], caretLine: number, caretColumnInLine: number): number {
+  let index = 0;
+  for (const [at, row] of rows.entries()) {
+    if (row.line === caretLine && row.start <= caretColumnInLine) index = at;
+  }
+  return index;
 }
 
 export function commonPrefix(items: string[]): string {
@@ -891,12 +917,6 @@ export function commonPrefix(items: string[]): string {
     if (!prefix) break;
   }
   return prefix;
-}
-
-export function sliceForDisplay(text: string, width: number, caretColumn: number): { text: string; offset: number } {
-  if (visibleWidth(text) <= width) return { text, offset: 0 };
-  const offset = Math.max(0, caretColumn - width + 4);
-  return { text: sliceVisible(text, offset, offset + width), offset };
 }
 
 interface PromptState {

@@ -21,8 +21,9 @@ src/
 1. **Input** arrives from the line editor. `@file` mentions are expanded, `!cmd` runs directly,
    `#note` appends to `BLUEBIRD.md`, `/slash` commands are handled in-process.
 2. **Effort** is resolved: a fixed level, or `auto`, which classifies the prompt by shape (lookups →
-   `minimal`, small edits → `low`, multi-file or design work → `high`, explicit care → `xhigh`) and
-   escalates when tools keep failing.
+   `minimal`, small edits → `low`, multi-file or design work → `high`, explicit care → `xhigh`, and
+   `max` only when the prompt asks for the largest budget by name) and escalates when tools keep
+   failing. Levels above `xhigh` are billed accordingly, so `auto` does not drift into `max` on its own.
 3. **Context is checked.** Token estimates come from a calibrated heuristic (no tokenizer
    dependency). Past `context.compactAt` the engine folds old turns into a summary and prunes stale
    tool output.
@@ -127,8 +128,11 @@ Rendering is centralised in `ui/screen.ts` so the transcript, the activity line 
 never fight over the cursor. Assistant text streams through a line-oriented markdown renderer that
 keeps state across chunks, so streamed output is identical to the final render. The line editor
 (`ui/input.ts`) runs in raw mode with history, completion, multiline, bracketed paste, and a
-single-key prompt used for permission confirmations. When stdout is not a TTY every UI call degrades
-to plain text, which is how `run`, pipes and CI work.
+single-key prompt used for permission confirmations. Its draft is a text area, not a single line:
+long lines soft-wrap into as many rows as they need (`wrapColumns` slices on grapheme boundaries, so
+wide characters are never cut), the box follows the caret once the draft passes eight rows, and
+`↑`/`↓` move by display row before they fall back to history. When stdout is not a TTY every UI call
+degrades to plain text, which is how `run`, pipes and CI work.
 
 ## Provider compatibility
 
@@ -137,8 +141,10 @@ Blue Bird adapts rather than assumes:
 - **Auth**: `Authorization: Bearer`, `api-key` (Azure), or `x-api-key` (Anthropic), chosen per host.
 - **Compatibility ladder**: on a 400 that names an unsupported field, the request is retried without
   it (`reasoning_effort`, `temperature`, `stream_options`, `parallel_tool_calls`, `tools`, …) and
-  `max_tokens` is swapped for `max_completion_tokens` when the endpoint asks for it.
-- **Effort mapping**: Anthropic → `thinking.budget_tokens` (1k…32k by level); OpenAI-compatible →
+  `max_tokens` is swapped for `max_completion_tokens` when the endpoint asks for it. Dropping `tools`
+  is never silent: it is announced in the transcript, because a tool-less agent looks broken rather
+  than limited.
+- **Effort mapping**: Anthropic → `thinking.budget_tokens` (1k…64k by level); OpenAI-compatible →
   `reasoning_effort`; responses → `reasoning: { effort }`; unsupported models ignore it.
 - **Fallbacks**: `fallbacks: ["other-provider/model"]` are tried when the primary is exhausted.
 

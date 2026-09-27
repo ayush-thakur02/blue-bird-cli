@@ -6,6 +6,25 @@ All notable changes to Blue Bird are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **`max` reasoning effort**, one level above `xhigh` for problems where a wrong answer costs more
+  than the thinking. It maps to `reasoning_effort: "max"` on OpenAI-style endpoints and a 64k
+  thinking budget on Anthropic; `auto` reaches it only when the prompt asks for the largest budget
+  by name, so the classifier never drifts into the most expensive level on its own.
+- **The input box is a text area.** Long lines wrap onto the next row instead of scrolling sideways,
+  the box grows with them and follows the caret past eight rows, and `↑`/`↓` walk the wrapped rows of
+  a draft before they fall back to history. Wrapping slices on grapheme boundaries, so wide
+  characters and emoji are never cut in half.
+
+### Fixed
+
+- **A dropped-tools retry is no longer silent.** Azure reasoning deployments reject function calls on
+  `/v1/chat/completions`, and the compatibility ladder used to strip `tools` and continue, leaving a
+  model with no way to read or edit anything — it answered by asking for "file and terminal access",
+  which reads as a permissions bug. Every provider now says so in the transcript the moment function
+  calling is dropped, and names the API that supports it (`api: "openai-responses"`).
+
 ## [0.2.0] - 2026-09-26
 
 ### Added

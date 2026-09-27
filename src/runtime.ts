@@ -12,7 +12,7 @@ import type {
 } from "./core/contracts.ts";
 import { defaultWorkspaceState, type Usage, type WorkspaceState } from "./core/contracts.ts";
 import { loadConfig, resolveFallbackModels, type LoadConfigOverrides } from "./config/load.ts";
-import type { ResolvedConfig, ResolvedModel, UiConfig } from "./config/schema.ts";
+import type { Effort, ResolvedConfig, ResolvedModel, UiConfig } from "./config/schema.ts";
 import { ProviderCache } from "./providers/index.ts";
 import { createToolRegistry, type ToolRegistry } from "./tools/index.ts";
 import { BackgroundTasks } from "./tools/shell.ts";
@@ -439,7 +439,7 @@ export async function detectGit(root: string): Promise<GitInfo> {
   }
 }
 
-function defaultEffort(config: ResolvedConfig): "none" | "minimal" | "low" | "medium" | "high" | "xhigh" {
+function defaultEffort(config: ResolvedConfig): Effort {
   const effort = config.effort;
   if (effort && effort !== "auto") return effort;
   return "medium";

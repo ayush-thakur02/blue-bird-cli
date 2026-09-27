@@ -34,6 +34,8 @@ export type StreamEvent =
   | { type: "thinking"; delta: string }
   | { type: "tool_call"; call: ToolCallBlock }
   | { type: "usage"; usage: Usage }
+  /** Something the user should see: the request is being adapted, not failing. */
+  | { type: "notice"; text: string }
   | {
       type: "done";
       stopReason: StopReason;

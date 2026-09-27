@@ -5,7 +5,7 @@ import { ProviderError } from "../util/errors.ts";
 import { callId } from "../util/ids.ts";
 import { dataUrl } from "../util/images.ts";
 import { estimateConversationTokens, estimateTokens } from "../util/tokens.ts";
-import { cachePlan, knownUnsupported, rememberUnsupported } from "./caching.ts";
+import { cachePlan, knownUnsupported, rememberUnsupported, withoutToolsNotice } from "./caching.ts";
 import type { ChatRequest, ModelInfo, ProbeResult, Provider, StreamEvent, StopReason } from "./types.ts";
 import {
   DEFAULT_CONNECT_TIMEOUT,
@@ -149,6 +149,9 @@ export function createOpenAiChatProvider(options: OpenAiChatOptions): Provider {
             disabled.add(adjustment);
             rememberUnsupported(id, adjustment);
           }
+          // Losing tools turns the agent into a chatbot that cannot read a file,
+          // which looks like a permissions problem rather than an endpoint limit.
+          if (adjustment === "tools") yield { type: "notice", text: withoutToolsNotice(safeHost(url)) };
           continue;
         }
         await ensureOk(new Response(text, { status: response.status, headers: response.headers }), id, "Chat completion");
@@ -561,6 +564,8 @@ export function effortToApi(effort: string): string | undefined {
       return "high";
     case "xhigh":
       return "xhigh";
+    case "max":
+      return "max";
     default:
       return undefined;
   }

@@ -59,7 +59,7 @@ interface Harness {
   exits: number;
 }
 
-function createHarness(options: { isBusy?: () => boolean; status?: () => string | undefined; columns?: number } = {}): Harness {
+function createHarness(options: { isBusy?: () => boolean; status?: () => string | undefined; columns?: number; history?: string[] } = {}): Harness {
   const theme = createTheme("none", { colorLevel: 0, unicode: true });
   const state: Harness = {
     screen: undefined as unknown as Screen,
@@ -86,6 +86,7 @@ function createHarness(options: { isBusy?: () => boolean; status?: () => string 
     theme,
     isBusy: options.isBusy ?? (() => false),
     ...(options.status ? { statusLine: options.status } : {}),
+    ...(options.history ? { history: options.history } : {}),
     onSubmit: () => {},
     onInterrupt: () => {
       state.interrupts += 1;
@@ -212,4 +213,64 @@ test("nothing is drawn while a turn is busy", () => {
   assert.equal(harness.writes.length, 1, "the box is cleared once and not redrawn");
   assert.match(harness.writes[0]!, /^\r/, "only the erase sequence is written");
   assert.equal(harness.row, boxTop, "the cursor is left at the top of the erased box");
+});
+
+test("a long line wraps onto the next row and the box grows with it", () => {
+  const harness = createHarness();
+  harness.input.start();
+  const restingRow = harness.row;
+
+  // 74 cells is what a body row has left beside the glyph on an 80-column screen.
+  harness.stdin.type("x".repeat(74));
+  assert.equal(harness.row, restingRow, "the first row of text still fits");
+  assert.equal(harness.input.value.length, 74);
+
+  harness.writes.length = 0;
+  harness.stdin.type("y");
+  assert.equal(harness.row, restingRow + 1, "the box gains a row when the text wraps");
+  const frame = harness.writes.join("");
+  assert.match(frame, /│ {3}y {2,}│/, "the wrapped tail is drawn on its own row");
+  assert.match(frame, /\u001b\[6G/, "the caret sits right after the wrapped text");
+
+  harness.stdin.type("\u007f");
+  assert.equal(harness.row, restingRow, "the box shrinks back when the text fits again");
+});
+
+test("the box stops growing at eight rows and scrolls the draft instead", () => {
+  const harness = createHarness({ columns: 24 });
+  harness.input.start();
+  harness.writes.length = 0;
+
+  harness.stdin.type("z".repeat(18 * 12));
+  const frame = harness.writes.find((chunk) => chunk.startsWith("╭"));
+  assert.ok(frame, "the box was redrawn");
+  assert.equal(frame.split("\n").length, 10, "top border, eight text rows, bottom border");
+  assert.equal(harness.input.value.length, 18 * 12, "the whole draft is kept");
+});
+
+test("up and down walk the wrapped rows of a draft before reaching history", () => {
+  const harness = createHarness({ history: ["an older prompt"] });
+  harness.input.start();
+  harness.stdin.type("x".repeat(75));
+  const draft = harness.input.value;
+  const lowerRow = harness.row;
+
+  harness.stdin.type("\u001b[A");
+  assert.equal(harness.input.value, draft, "the draft stays instead of the history entry");
+  assert.equal(harness.row, lowerRow - 1, "the caret moves up one row inside the box");
+
+  harness.stdin.type("\u001b[A");
+  assert.equal(harness.input.value, draft, "the top row is the end of the draft, not history");
+
+  harness.stdin.type("\u001b[B");
+  assert.equal(harness.row, lowerRow, "the caret comes back down");
+  assert.equal(harness.input.value, draft);
+});
+
+test("a single-row draft still reaches history with the up arrow", () => {
+  const harness = createHarness({ history: ["an older prompt"] });
+  harness.input.start();
+  harness.stdin.type("short");
+  harness.stdin.type("\u001b[A");
+  assert.equal(harness.input.value, "an older prompt");
 });

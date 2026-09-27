@@ -6,7 +6,7 @@ import { ProviderError } from "../util/errors.ts";
 import { callId } from "../util/ids.ts";
 import { estimateConversationTokens, estimateTokens } from "../util/tokens.ts";
 import { estimateCost } from "./openai-chat.ts";
-import { cachePlan, knownUnsupported, rememberUnsupported, type CachePlan } from "./caching.ts";
+import { cachePlan, knownUnsupported, rememberUnsupported, withoutToolsNotice, type CachePlan } from "./caching.ts";
 import type { ChatRequest, ModelInfo, ProbeResult, Provider, StreamEvent, StopReason } from "./types.ts";
 import {
   DEFAULT_CONNECT_TIMEOUT,
@@ -120,6 +120,7 @@ export function createAnthropicProvider(options: { id: string; def: ProviderDef;
           request.logger.debug(`Retrying Anthropic request without ${adjustment}`);
           disabled.add(adjustment);
           rememberUnsupported(id, adjustment);
+          if (adjustment === "tools") yield { type: "notice", text: withoutToolsNotice(safeHost(messagesUrl)) };
           continue;
         }
         if (/prompt is too long|too many tokens|exceeds.*context/i.test(lowered)) {

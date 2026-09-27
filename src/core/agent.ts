@@ -575,6 +575,9 @@ export class Agent {
             case "usage":
               usage = event.usage;
               break;
+            case "notice":
+              this.options.ui.notice?.(event.text, "warn");
+              break;
             case "done": {
               text = event.text || text;
               thinking = event.thinking || thinking;

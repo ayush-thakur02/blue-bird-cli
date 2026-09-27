@@ -41,6 +41,18 @@ export function rememberUnsupported(providerId: string, field: string): void {
   unsupportedByProvider.set(providerId, existing);
 }
 
+/**
+ * Shown when the compatibility ladder has to drop function calling. The turn
+ * still succeeds, so without this the only symptom is a model that insists it
+ * has no file or terminal access.
+ */
+export function withoutToolsNotice(host: string): string {
+  return (
+    `${host} rejected function tools, so this turn runs without them: the model cannot read, edit or run anything. ` +
+    `Move the provider to an API that supports tools (Azure reasoning models need api: "openai-responses", not "openai-completions").`
+  );
+}
+
 export function resetUnsupported(providerId?: string): void {
   if (providerId) unsupportedByProvider.delete(providerId);
   else unsupportedByProvider.clear();

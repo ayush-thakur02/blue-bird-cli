@@ -385,6 +385,53 @@ function applySgr(active: string, sequence: string): string {
   return sequence.slice(resetIndex + 3);
 }
 
+export interface ColumnRow {
+  text: string;
+  /** Display column inside the source text where this row starts. */
+  start: number;
+}
+
+/**
+ * Splits plain text into rows of at most `width` display columns. Rows break on
+ * grapheme boundaries, so a wide character is never cut in half, and each row
+ * reports the column it starts at — enough to map a caret back to a row.
+ */
+export function wrapColumns(text: string, width: number): ColumnRow[] {
+  if (width < 1) return [{ text, start: 0 }];
+  const rows: ColumnRow[] = [];
+  let row = "";
+  let rowWidth = 0;
+  let start = 0;
+  for (const cluster of clusters(text)) {
+    if (rowWidth > 0 && rowWidth + cluster.width > width) {
+      rows.push({ text: row, start });
+      start += rowWidth;
+      row = "";
+      rowWidth = 0;
+    }
+    row += cluster.text;
+    rowWidth += cluster.width;
+  }
+  rows.push({ text: row, start });
+  return rows;
+}
+
+/**
+ * Code-unit offset of a display column inside `text`. A column pointing into a
+ * wide cluster snaps to the cluster's start, because a caret cannot sit in the
+ * middle of a character.
+ */
+export function offsetAtColumn(text: string, column: number): number {
+  let width = 0;
+  let offset = 0;
+  for (const cluster of clusters(text)) {
+    if (width + cluster.width > column) break;
+    width += cluster.width;
+    offset += cluster.text.length;
+  }
+  return offset;
+}
+
 export function hrule(width: number, char = "─"): string {
   if (!unicodeOk) char = "-";
   const repeat = Math.max(0, width);
