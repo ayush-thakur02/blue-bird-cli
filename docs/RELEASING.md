@@ -18,6 +18,9 @@ what makes the name publishable. Scopes require public access, which `publishCon
    owner `ayush-thakur02`, repository `blue-bird-cli`, workflow `release.yml`.
    Configurations created after 2026-09-03 default to staged publishing only — enable the direct
    `npm publish` action too, or the workflow's publish step is rejected.
+   Trusted publishing is OIDC-only and needs npm 11.5.1+; the workflow upgrades npm before
+   publishing because the npm bundled with Node 22.18 (10.9.3) cannot use it and fails with
+   `ENEEDAUTH`, which looks identical to having no configuration at all.
    *Token alternative:* create a granular access token with **Bypass 2FA** checked and publish rights,
    add it as the repository secret `NPM_TOKEN`, then in `.github/workflows/release.yml` add
    `registry-url: https://registry.npmjs.org` to the `setup-node` step and

@@ -27,6 +27,12 @@ jobs:
         with:
           node-version: "22.18"
 
+      # Trusted publishing authenticates over OIDC, which npm only attempts from
+      # 11.5.1 on. Node 22.18 ships npm 10.9.3, which has no OIDC support and
+      # fails the publish step with ENEEDAUTH even when the trusted publisher is
+      # configured correctly.
+      - run: npm install -g npm@^11.5.1
+
       - run: npm ci --include=dev
 
       - name: Tag matches package.json
