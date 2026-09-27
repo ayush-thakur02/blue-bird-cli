@@ -1,0 +1,58 @@
+name: oidc-diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: OIDC availability
+        run: |
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL present: ${ACTIONS_ID_TOKEN_REQUEST_URL:+yes}"
+          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN present: ${ACTIONS_ID_TOKEN_REQUEST_TOKEN:+yes}"
+          echo "GITHUB_WORKFLOW_REF: $GITHUB_WORKFLOW_REF"
+          echo "node: $(node --version)"
+
+      - name: Exchange an OIDC token for an npm publish token
+        run: |
+          npm install -g npm@^11.5.1 >/dev/null 2>&1
+          echo "npm: $(npm --version)"
+          curl -sS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=npm:registry.npmjs.org" \
+            -o /tmp/id-token.json
+          node -e '
+            const fs = require("fs");
+            const body = JSON.parse(fs.readFileSync("/tmp/id-token.json", "utf8"));
+            if (!body.value) {
+              console.error("no id_token in the response:", JSON.stringify(body));
+              process.exit(1);
+            }
+            const claims = JSON.parse(Buffer.from(body.value.split(".")[1], "base64url").toString("utf8"));
+            for (const key of ["aud", "repository", "repository_visibility", "workflow", "job_workflow_ref", "ref", "event_name", "sub"]) {
+              console.log(`${key}: ${claims[key]}`);
+            }
+            fs.writeFileSync("/tmp/id-token.txt", body.value);
+          '
+          status=$(curl -sS -o /tmp/exchange.json -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer $(cat /tmp/id-token.txt)" \
+            -H "Content-Type: application/json" \
+            "https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/%40not.ayushthakur%2Fblue-bird-cli")
+          echo "exchange status: $status"
+          node -e '
+            const raw = require("fs").readFileSync("/tmp/exchange.json", "utf8");
+            let body = {};
+            try {
+              body = JSON.parse(raw);
+            } catch {
+              console.log("exchange body (not json):", raw);
+              process.exit(0);
+            }
+            if (body.token) console.log("exchange returned a publish token (length " + body.token.length + ")");
+            else console.log("exchange body:", JSON.stringify(body));
+          '
