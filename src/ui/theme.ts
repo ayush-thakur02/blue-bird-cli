@@ -59,6 +59,12 @@ export function createTheme(
 
   const dark = resolved === "dark";
   const none = resolved === "none";
+  // A `none` theme — or any theme built for level 0 — must emit no escape codes
+  // at all, so the dim helpers follow the theme's own level instead of the
+  // process-wide one. Reading the global meant a plain theme still dimmed its
+  // text whenever stdout happened to be a colour terminal.
+  const quiet = none || level === 0;
+  const dimmed = quiet ? plain : dimStyle;
 
   const primary = none
     ? plain
@@ -92,9 +98,9 @@ export function createTheme(
   const tone = (value: Tone, text: string): string => {
     switch (value) {
       case "dim":
-        return dimStyle(text);
+        return dimmed(text);
       case "muted":
-        return dimStyle(text);
+        return dimmed(text);
       case "info":
         return info(text);
       case "accent":
@@ -114,8 +120,8 @@ export function createTheme(
     name: resolved,
     primary,
     accent,
-    dim: dimStyle,
-    muted: (text) => dimStyle(text),
+    dim: dimmed,
+    muted: dimmed,
     success,
     warn,
     error,
@@ -127,7 +133,7 @@ export function createTheme(
       if (headingLevel === 2) return primary(text);
       return paint([1])(text);
     },
-    thinking: (text) => (none ? text : italic(dimStyle(text))),
+    thinking: (text) => (quiet ? text : italic(dimStyle(text))),
     border: (text) => (none ? text : dark ? color([61, 89, 161], fg.gray)(text) : color([150, 160, 175], fg.gray)(text)),
     diffAdd: none ? plain : dark ? color([115, 218, 155], fg.green) : color([26, 122, 71], fg.green),
     diffDel: none ? plain : dark ? color([247, 118, 142], fg.red) : color([176, 35, 63], fg.red),

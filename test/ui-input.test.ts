@@ -128,6 +128,28 @@ test("the caret is placed after the typed text, inside the box border", () => {
   // right after "hi" — one-based, which is what `CSI n G` expects.
   assert.match(output, /\u001b\[7G/, `expected the caret at column 7, got ${JSON.stringify(output)}`);
   assert.match(output, /│ ❯ hi\s+│/, "the text is drawn inside the frame");
+  // A level-0 theme is plain even when stdout is a colour terminal: reading the
+  // process-wide level instead of the theme's own dimmed the prompt glyph in a
+  // terminal and left it alone in CI, so the suite passed where a user failed.
+  assert.ok(!output.includes("\u001b[2m"), `a level-0 theme draws no escape codes, got ${JSON.stringify(output)}`);
+});
+
+test("the terminal caret is shown at the prompt and hidden while a turn streams", () => {
+  let busy = false;
+  const harness = createHarness({ isBusy: () => busy });
+  harness.input.start();
+  assert.match(harness.writes.join(""), /\u001b\[\?25h/, "the prompt shows the terminal cursor");
+
+  harness.writes.length = 0;
+  busy = true;
+  harness.stdin.type("queued while streaming");
+  const erased = harness.writes.join("");
+  assert.match(erased, /\u001b\[\?25l/, `the caret is hidden while the box is gone, got ${JSON.stringify(erased)}`);
+
+  harness.writes.length = 0;
+  busy = false;
+  harness.input.refresh();
+  assert.match(harness.writes.join(""), /\u001b\[\?25h/, "the caret comes back with the box");
 });
 
 test("a status line and a completion list stay inside the redrawn block", () => {
@@ -210,8 +232,8 @@ test("nothing is drawn while a turn is busy", () => {
   busy = true;
   harness.stdin.type("queued while streaming");
 
-  assert.equal(harness.writes.length, 1, "the box is cleared once and not redrawn");
-  assert.match(harness.writes[0]!, /^\r/, "only the erase sequence is written");
+  assert.equal(harness.writes.length, 2, "the box is cleared once and not redrawn");
+  assert.match(harness.writes.join(""), /^\r\u001b\[1A\u001b\[0J\u001b\[\?25l$/, "only the erase sequence is written");
   assert.equal(harness.row, boxTop, "the cursor is left at the top of the erased box");
 });
 

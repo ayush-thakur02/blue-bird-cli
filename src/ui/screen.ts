@@ -29,6 +29,7 @@ export class Screen {
   private inputFrame = "";
   /** Row inside the input block the cursor was left on (0 = top border). */
   private inputCursorRow = 0;
+  private cursorVisible = false;
   private streamColumn = 0;
   private streamedAny = false;
   private previousLine = "";
@@ -129,7 +130,7 @@ export class Screen {
    */
   drawInputBox(render: InputBoxRender): void {
     if (!this.isTTY) return;
-    this.clearInput();
+    this.eraseInput();
     const inner = this.width - 2;
     const top = this.theme.border(`╭${"─".repeat(inner)}╮`);
     const bottom = this.theme.border(`╰${"─".repeat(inner)}╯`);
@@ -144,7 +145,15 @@ export class Screen {
     this.inputFrame = rows.join("\n");
     this.write(this.inputFrame);
     this.write(cursor.up(rows.length - 1 - this.inputCursorRow));
-    if (render.caret) this.write(cursor.toColumn(render.caret.column));
+    // The terminal cursor is the caret, so it is only visible where there is one
+    // to place: the input box. Anything else (a permission prompt, an erased box
+    // while a turn streams) hides it rather than blinking over the transcript.
+    if (render.caret) {
+      this.write(cursor.toColumn(render.caret.column));
+      this.setCursorVisible(true);
+    } else {
+      this.setCursorVisible(false);
+    }
   }
 
   updateInputBox(render: InputBoxRender): void {
@@ -153,6 +162,11 @@ export class Screen {
 
   clearInput(): void {
     if (!this.isTTY) return;
+    this.eraseInput();
+    this.setCursorVisible(false);
+  }
+
+  private eraseInput(): void {
     const lines = this.inputBlockLines || countLinesInFrame(this.inputFrame);
     if (lines > 0) {
       this.write(`\r${cursor.up(this.inputCursorRow)}${cursor.clearDown()}`);
@@ -162,15 +176,21 @@ export class Screen {
     this.inputFrame = "";
   }
 
+  private setCursorVisible(visible: boolean): void {
+    if (!this.isTTY || this.cursorVisible === visible) return;
+    this.cursorVisible = visible;
+    this.write(visible ? cursor.show() : cursor.hide());
+  }
+
   /** Removes the live UI so an external process can own the terminal. */
   suspend(): void {
     this.clearActivity();
     this.clearInput();
-    this.write(cursor.show());
+    this.setCursorVisible(true);
   }
 
   resume(): void {
-    this.write(cursor.hide());
+    this.setCursorVisible(false);
   }
 
   error(text: string): void {

@@ -6,6 +6,17 @@ All notable changes to Blue Bird are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **The caret blinks at the prompt again.** The terminal cursor was hidden when a session started and
+  only shown when it ended, so the input box positioned a caret nobody could see. It is now shown
+  with the box and hidden whenever the box is erased, which keeps it out of the transcript while a
+  turn streams (`src/ui/screen.ts`).
+- **A plain theme draws no escape codes.** The dim helpers read the process-wide colour level instead
+  of the theme's own, so a `none`/level-0 theme still dimmed the prompt glyph in a colour terminal —
+  which made the test suite pass in CI, where stdout is not a TTY, and fail on a developer's machine.
+  The suite now pins the plain output, with or without a terminal (`src/ui/theme.ts`).
+
 ## [0.3.0] - 2026-09-27
 
 ### Added
