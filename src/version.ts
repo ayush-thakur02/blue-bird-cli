@@ -4,5 +4,5 @@ export const CLI_NAME = "bluebird";
 export const CONFIG_DIR = ".bluebird";
 /** Published npm name; the scope is what the registry accepts for this package. */
 export const PACKAGE_NAME = "@not.ayushthakur/blue-bird-cli";
-export const VERSION = "0.2.0";
+export const VERSION = "0.3.0";
 export const CONFIG_VERSION = 1;

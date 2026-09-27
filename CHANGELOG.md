@@ -6,6 +6,8 @@ All notable changes to Blue Bird are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-27
+
 ### Added
 
 - **`max` reasoning effort**, one level above `xhigh` for problems where a wrong answer costs more
@@ -94,7 +96,8 @@ All notable changes to Blue Bird are documented here. The format follows
 - `run` for automation: `--json` result object, `--stream` events, pipe-friendly stdin, exit codes.
 - Zero runtime dependencies — Node builtins only, nothing installed alongside the CLI.
 
-[Unreleased]: https://github.com/ayush-thakur02/blue-bird-cli/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/ayush-thakur02/blue-bird-cli/compare/v0.3.0...HEAD
 [0.1.0]: https://github.com/ayush-thakur02/blue-bird-cli/releases/tag/v0.1.0
 [0.1.1]: https://github.com/ayush-thakur02/blue-bird-cli/compare/v0.1.0...v0.1.1
 [0.2.0]: https://github.com/ayush-thakur02/blue-bird-cli/compare/v0.1.1...v0.2.0
+[0.3.0]: https://github.com/ayush-thakur02/blue-bird-cli/compare/v0.2.0...v0.3.0
